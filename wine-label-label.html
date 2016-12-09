@@ -356,7 +356,7 @@ demo demo/index.html
 															 case 'other': return {color: "#ff0000"};
 															 case 'vintage.date':  return {color: "tomato"};
 															 case 'brandName':  return {color: "goldenrod"};
-															 case 'alcohol':   return {color: "#0000ff"};
+															 case 'vintage.alcohol':   return {color: "#0000ff"};
 													 }
 											 }
 									 }).addTo(map);
@@ -377,14 +377,53 @@ demo demo/index.html
 			 add_history : function(cmd,...parms) {
 					 console.log(cmd+':'+JSON.stringify(parms));
 			 },
+			 // edit an existing annotation
+			 edit : function (key,edits={}) {
+					 var fields=['type','text','geometry'];
+
+					 // We should really limit to these types
+					 var type_is_good=false;
+					 var types=['color','type','country','language',
+											'brandName','varietal','otherDesignation',
+											'winery.name','winery.address','winery.addressQualification',
+											'vintage.year','vintage.alcohol'];
+
+					 var item = this.data.annotations[key];
+					 var rc = this.annotation_rc(key);
+
+					 // Throw Errr?
+					 if (! rc) {
+							 return null;
+					 }
+
+					 var rc_path='data.row.'+rc[0]+'.'+rc[1];
+
+					 if (edits.type) {
+							 types.forEach((t)=>{ if (t==edits.type) { type_is_good=true;}});
+					 }
+					 fields.forEach((f)=>{
+							 if (edits[f]) {
+									 item[f]=edits[f];
+									 this.set(rc.path+'.'+f,item[f]);
+							 }
+					 });
+					 if (edits.key) {
+							 delete this.data.annotations[key];
+							 this.data.annotations[edits.key]=item;
+					 }
+					 this.add_history('edit',key,edits);
+			 },
 			 // drop a notation from consideration
 			 drop : function(keys,parms={history:true}) {
+					 if (typeof keys !== "object") {
+							 keys=[keys];
+					 }
 					 var i,a;
 					 keys.forEach((key)=>{
 							 delete this.data.annotations[key];
 					 });
 					 if (parms.history) {
-							 this.add_history('drop',nums);
+							 this.add_history('drop',keys);
 					 }
 					 this.notifyPath('data.annotations.*');
 			 },
