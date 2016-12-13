@@ -19,6 +19,56 @@
 demo demo/index.html
 -->
 
+<dom-module id="shared-styles">
+  <template>
+    <style>
+		 .brandName {
+				 color : var(--w-brandName-color)
+		 }
+		 .other {
+				 color : var(--w-other-color)
+		 }
+		 .brandName {
+				 color : var(--w-brandName-color)
+		 }
+		 .vintage-date {
+				 color : var(--w-vintage-date-color)
+		 }
+		 .vintage-alcohol {
+				 color : var(--w-vintage-alcohol-color)
+		 }
+		 .color {
+				 color : var(--w-color-color)
+		 }
+		 .type {
+				 color : var(--w-type-color)
+		 }
+		 .country {
+				 color : var(--w-country-color)
+		 }
+		 .language {
+				 color : var(--w-language-color)
+		 }
+		 .varietal {
+				 color : var(--w-varietal-color)
+		 }
+		 .otherDesignation {
+				 color : var(--w-otherDesignation-color)
+		 }
+		 .winery-name {
+				 color : var(--w-winery-name-color)
+		 }
+		 .winery-address {
+				 color : var(--w-winery-address-color)
+		 }
+		 .winery-addressQualification {
+				 color : var(--w-winery-addressQualification-color)
+		 }
+    </style>
+  </template>
+</dom-module>
+
+
 <dom-module id="wine-label-item">
 	<template>
 		<style>
@@ -93,45 +143,6 @@ demo demo/index.html
 					@apply(--layout-flex);
 			}
 
-		 [label^=brandName] {
-				--paper-input-container-input: {
-						 font-size: 48px;
-						 width: 10em;
-						 color: goldenrod;
-				 }
-		 }
-		 [label^=other] {
-				 --paper-input-container-input: {
-						 font-size: 18px;
-						 color: grey;
-				 };
-		 }
-		 [label^=varietal] {
-				 --paper-input-container-input: {
-						 font-size: 36px;
-						 color: brown;
-				 };
-		 }
-		 [label^=alcohol] {
-				 --paper-input-container-input: {
-						 font-size: 18px;
-						 color: brown;
-				 };
-		 }
-		 [label^=otherDesignation] {
-				 --paper-input-container-input: {
-						 font-size: 36px;
-						 color: brown;
-				 };
-		 }
-		 [label^="vintage.date"] {
-				 --paper-input-container-input: {
-						 font-size: 48px;
-						 width: 4em;
-						 color: tomato;
-				 };
-		 }
-
 		 .flex-center-justified {
 				 @apply(--layout-vertical);
 				 @apply(--layout-center-justified);
@@ -142,12 +153,15 @@ demo demo/index.html
 		 }
     </style>
 
-		<div class="label_aspect" id="mapid">
-			MAP HERE
-		</div>
-
-    <form>
-			<template is="dom-repeat" items="[[data.rows]]">
+<!--		<paper-tabs selected="{{selected}}">
+			<paper-tab>Map</paper-tab>
+			<paper-tab>Table</paper-tab>
+			</paper-tabs>
+-->
+<!--			<iron-pages selected="{{selected}}"> -->
+				<div class="label_aspect" id="mapid">
+				</div>
+				<div>			<template is="dom-repeat" items="[[data.rows]]">
 				<div class="container flex-horizontal">
 					<template is="dom-repeat" items="[[item]]">
 					<wine-label-item>
@@ -177,9 +191,11 @@ demo demo/index.html
 						</paper-dropdown-menu>
 					</wine-label-item>
 				</div>
-				<paper-button raised onclick="_submit(event)">Submit</paper-button>
-				<paper-button raised onclick="_reset(event)">Reset</paper-button>
-    </form>
+				</div>
+<!--			</iron-pages> -->
+
+			<paper-button raised onclick="_submit(event)">Submit</paper-button>
+			<paper-button raised onclick="_reset(event)">Reset</paper-button>
 
   </template>
 
@@ -210,7 +226,7 @@ demo demo/index.html
 							 value : function() {
 									 return {};
 							 },
-							 observer: 'redraw'
+							 observer: 'draw'
 					 },
 					 map: {
 							 type: Object,
@@ -307,61 +323,95 @@ demo demo/index.html
 					 return by_row;
 			 },
 
-			 play_history : function(history) {
-					 this.data.history.forEach((h) => {
+			 play_history : function(history,parms={pause:null}) {
+					 var h;
+					 if (history.length === 0) {
+							 this.redraw_annotations();
+					 } else {
+							 h = history.shift();
 							 this[h[0]].apply(this,(h[1]));
-					 });
-					 this.redraw();
+							 if (parms.pause) {
+									 this.redraw_annotations();
+									 setTimeout(()=>{
+											 this.play_history(history,parms); },
+															parms.pause);
+							 } else {
+									 this.play_history(history,parms);
+							 }
+					 }
 			 },
 
-			 redraw: function() {
+
+			 draw : function() {
+
 					 if (Object.keys(this.data).length == 0 ) {
 							 return;
 					 }
-					 if (this.map) {
-							 this.map.remove();
-					 }
-					 this.map = L.map(this.$.mapid, {
-							 crs: L.CRS.Simple,
-							 minZoom: -2
-					 });
-
-					 var map=this.map;
-					 setTimeout(function(){ map.invalidateSize()}, 200);
-//					 map.invalidateSize();
-
-
-					 var bounds = [[0,0], [-1365,2048]];
-					 var image = L.imageOverlay(this.data.image, bounds).addTo(map);
-					 map.fitBounds(bounds);
-
-					 if (this.data.annotations) {
-
-						setTimeout(()=>{this.set('data.rows',[])},200);
-						setTimeout(()=>{
-							 this.set('data.rows',this.annotations_to_rows(this.data.annotations))
-						},300);
-
-							 Object.keys(this.data.annotations).forEach((k) => {
-									 var a=this.data.annotations[k];
-									 var an={'type':'Feature',
-													 properties:{key:k,
-																			 text:a.text,
-																			 type:a.type,
-													 },
-													 geometry:a.geometry};
-									 L.geoJSON(an, {
-											 style: function(feature) {
-													 switch (feature.properties.type) {
-															 case 'other': return {color: "#ff0000"};
-															 case 'vintage.date':  return {color: "tomato"};
-															 case 'brandName':  return {color: "goldenrod"};
-															 case 'vintage.alcohol':   return {color: "#0000ff"};
-													 }
-											 }
-									 }).addTo(map);
+					 if (! this.map) {
+							 this.map = L.map(this.$.mapid, {
+									 crs: L.CRS.Simple,
+									 minZoom: -2
 							 });
 					 }
+					 setTimeout(()=>{ this.map.invalidateSize()}, 200);
+					 var bounds = [[0,0], [-1365,2048]];
+					 var image = L.imageOverlay(this.data.image, bounds).addTo(this.map);
+					 this.map.fitBounds(bounds);
+
+					 this.redraw_annotations();
+
+			 },
+
+			 _annotationLayer : null,
+
+			 redraw_annotations: function() {
+					 var features=[];
+
+					 if (this._annotationLayer) {
+							 this.map.removeLayer(this._annotationLayer);
+					 }
+
+					 if (! this.data.annotations) {
+							 return null;
+					 }
+
+						setTimeout(()=>{
+							 this.set('data.rows',this.annotations_to_rows(this.data.annotations))
+						},200);
+
+					 Object.keys(this.data.annotations).forEach((k) => {
+							 var a=this.data.annotations[k];
+							 features.push({'type':'Feature',
+											 properties:{key:k,
+																	 text:a.text,
+																	 type:a.type,
+											 },
+											 geometry:a.geometry});
+					 });
+
+					 this._annotationLayer = L.geoJSON(features, {
+							 style: function(feature) {
+									 switch (feature.properties.type) {
+											 case 'other': return {color: "orange"};
+											 case 'brandName':  return {color: "chocolate"};
+											 case 'vintage.date':  return {color: "tomato"};
+											 case 'vintage.alcohol':   return {color: "maroon"};
+											 case 'color': return { color: "darkred"};
+											 case 'type':	 return { color: "salmon"};
+											 case 'country': return { color: "skyblue"};
+											 case 'language': return { color: "dodgerblue"};
+											 case 'varietal': return { color: "darkgreen"};
+											 case 'otherDesignation': return { color: "yellowgreen"};
+											 case 'winery.name': return { color: "darkorchid"};
+											 case 'winery.address': return { color: "orchid"};
+											 case 'winery.addressQualification': return { color: "mediumpurple"};
+											 default: return { color : "light grey" }
+
+
+									 }
+							 }
+					 }).bindPopup((layer)=>{ return layer.feature.properties.key; });
+					 this._annotationLayer.addTo(this.map);
 			 },
 
       _setData : function() {
@@ -396,7 +446,7 @@ demo demo/index.html
 							 return null;
 					 }
 
-					 var rc_path='data.row.'+rc[0]+'.'+rc[1];
+					 var rc_path='data.rows.'+rc[0]+'.'+rc[1];
 
 					 if (edits.type) {
 							 types.forEach((t)=>{ if (t==edits.type) { type_is_good=true;}});
